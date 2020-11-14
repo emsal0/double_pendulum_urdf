@@ -1,0 +1,154 @@
+<?xml version="1.0"?>
+<robot name="myfirst" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="prim_length" value="0.6" />
+  <xacro:property name="prim_radius" value="0.1" />
+  <xacro:property name="prim_angle" value="0.4" />
+  <xacro:property name="prim_height" value="2" />
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.05 0.05 0.05" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 2" />
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.05 0.05 0.05" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+    </inertial>
+  </link>
+  <link name="arm1">
+    <visual>
+      <geometry>
+        <cylinder length="${prim_length}" radius="${prim_radius}" />
+      </geometry>
+      <origin rpy="0 ${pi/2} 0" xyz="${prim_length/2} 0 ${prim_height}" />
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="${prim_length}" radius="${prim_radius}" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5"/>
+      <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+    </inertial>
+  </link>
+  <link name="arm2">
+    <visual>
+      <geometry>
+        <cylinder length="${prim_length}" radius="${prim_radius}" />
+      </geometry>
+      <origin rpy="0 ${pi/2} 0" xyz="${prim_length/2} 0 ${prim_height}" />
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="${prim_length}" radius="${prim_radius}" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5"/>
+      <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+    </inertial>
+  </link>
+
+  <joint name="joint_base_1" type="continuous">
+    <limit effort="1000.0" velocity="0.5" />
+    <axis xyz="0 0 1" />
+    <parent link="base_link" />
+    <child link="arm1" />
+    <origin rpy="${pi/2} 0 0"
+      xyz="0 2 2" />
+    <calibration rising="0.0"/>
+  </joint>
+  <transmission name="joint_base_1_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="joint_base_1_motor">
+      <mecahnicalReduction>1</mecahnicalReduction>
+    </actuator>
+    <joint name="joint_base_1">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <joint name="joint_12" type="continuous">
+    <limit effort="1000.0" velocity="0.5" />
+    <axis xyz="0 0 1" />
+    <parent link="arm1" />
+    <child link="arm2" />
+    <origin rpy="0 0 0"
+        xyz="${prim_length} 0 0" />
+    <calibration rising="0.0"/>
+  </joint>
+  <transmission name="joint_12_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <actuator name="joint_12_motor">
+      <mecahnicalReduction>1</mecahnicalReduction>
+    </actuator>
+    <joint name="joint_12">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+    </joint>
+  </transmission>
+
+  <xacro:macro name="make_body_links_r" params="num_links orig_num_links">
+    <link name="link_${orig_num_links - num_links}">
+      <visual>
+        <geometry>
+          <cylinder length="${prim_length}" radius="${prim_radius}" />
+        </geometry>
+        <origin rpy="0 ${pi/2} ${prim_height}" xyz="${prim_length/2} 0 0" />
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="${prim_length}" radius="${prim_radius}" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="5"/>
+        <inertia ixx="0.4" ixy="0.0" ixz="0.0" iyy="0.4" iyz="0.0" izz="0.2"/>
+      </inertial>
+    </link>
+
+    <xacro:if value="${orig_num_links - num_links >= 1}">
+      <joint name="joint_${orig_num_links - num_links}" type="revolute">
+        <limit effort="1000.0" lower="${-pi/2}" upper="${pi/2}" velocity="0.5" />
+        <axis xyz="1 0 0" />
+        <parent link="link_${orig_num_links - num_links - 1}" />
+        <child link="link_${orig_num_links - num_links}" />
+        <origin rpy="0 0 ${(-1.0)**num_links * prim_angle}"
+            xyz="${prim_length} 0 0" />
+        <calibration rising="0.0"/>
+      </joint>
+      <transmission name="joint_${orig_num_links - num_links}_trans">
+        <type>transmission_interface/SimpleTransmission</type>
+        <actuator name="$joint_${orig_num_links - num_links}_motor">
+          <mecahnicalReduction>1</mecahnicalReduction>
+        </actuator>
+        <joint name="joint_${orig_num_links - num_links}">
+          <hardwareInterface>PositionJointInterface</hardwareInterface>
+        </joint>
+      </transmission>
+    </xacro:if>
+
+    <xacro:if value="${num_links}">
+      <xacro:make_body_links_r num_links="${num_links-1}" orig_num_links="${orig_num_links}" />
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="make_body_links" params="num_links">
+    <xacro:make_body_links_r num_links="${num_links}" orig_num_links="${num_links}" />
+  </xacro:macro>
+
+  <!-- xacro:make_body_links num_links="2" / -->
+
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/</robotNamespace>
+    </plugin>
+  </gazebo>
+</robot>
